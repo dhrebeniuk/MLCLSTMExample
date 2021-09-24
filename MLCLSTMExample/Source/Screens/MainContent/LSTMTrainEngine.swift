@@ -17,7 +17,7 @@ class LSTMTrainEngine {
     var trainingGraph: MLCTrainingGraph!
     var inferenceGraph: MLCInferenceGraph!
     var inputTensor: MLCTensor!
-    
+
     var lstmInputWeightTensors = [MLCTensor]()
     var lstmInputBiasTensors = [MLCTensor]()
     var lstmHiddenWeightTensors = [MLCTensor]()
@@ -53,15 +53,15 @@ extension LSTMTrainEngine {
     private func initializeTensors() {
         device = MLCDevice(type: .cpu)!
 
-        inputTensor = MLCTensor(descriptor: MLCTensorDescriptor(shape: [batchSize, windowSize, sampleSize], dataType: .float32)!)
+        inputTensor = MLCTensor(descriptor: MLCTensorDescriptor(shape: [1, windowSize, sampleSize], dataType: .float32)!)
 
-        lossLabelTensor = MLCTensor(descriptor: MLCTensorDescriptor(shape: [batchSize, windowSize, sampleSize], dataType: .float32)!)
+        lossLabelTensor = MLCTensor(descriptor: MLCTensorDescriptor(shape: [1, windowSize, sampleSize], dataType: .float32)!)
         
-        lstmInputWeightTensors = [MLCTensor](repeating: MLCTensor(descriptor: MLCTensorDescriptor(shape: [batchSize, sampleSize*sampleSize], dataType: .float32)!, randomInitializerType: .xavier), count: 4*lstmLayersCount)
+        lstmInputWeightTensors = [MLCTensor](repeating: MLCTensor(descriptor: MLCTensorDescriptor(shape: [1, sampleSize*sampleSize], dataType: .float32)!, randomInitializerType: .xavier), count: 4*lstmLayersCount)
         
-        lstmInputBiasTensors = [MLCTensor](repeating: MLCTensor(descriptor: MLCTensorDescriptor(shape:  [batchSize, sampleSize], dataType: .float32)!, randomInitializerType: .xavier), count: 4 * lstmLayersCount)
+        lstmInputBiasTensors = [MLCTensor](repeating: MLCTensor(descriptor: MLCTensorDescriptor(shape:  [1, sampleSize], dataType: .float32)!, randomInitializerType: .xavier), count: 4 * lstmLayersCount)
         
-        lstmHiddenWeightTensors = [MLCTensor](repeating: MLCTensor(descriptor: MLCTensorDescriptor(shape:  [batchSize, sampleSize*sampleSize], dataType: .float32)!, randomInitializerType: .xavier), count: 4 * lstmLayersCount)
+        lstmHiddenWeightTensors = [MLCTensor](repeating: MLCTensor(descriptor: MLCTensorDescriptor(shape:  [1, sampleSize*sampleSize], dataType: .float32)!, randomInitializerType: .xavier), count: 4 * lstmLayersCount)
     }
     
     private func buildGraph() {
@@ -146,11 +146,11 @@ extension LSTMTrainEngine {
                                       lossLabelsData: ["prediction" : nextWindowData],
                                       lossLabelWeightsData: nil,
                                       batchSize: batchSize,
-                                      options: [.synchronous]) { [self] (r, e, time) in
+                                      options: [.synchronous]) { (r, e, time) in
                     
                     let bufferOutput = UnsafeMutableRawPointer.allocate(byteCount: batchSize * windowSize * MemoryLayout<Float>.size, alignment: MemoryLayout<Float>.alignment)
                     
-                    lstmTensor?.copyDataFromDeviceMemory(toBytes: bufferOutput, length: batchSize * windowSize * MemoryLayout<Float>.size, synchronizeWithDevice: false)
+                    r?.copyDataFromDeviceMemory(toBytes: bufferOutput, length: batchSize * windowSize * MemoryLayout<Float>.size, synchronizeWithDevice: false)
                     
                     let float4Ptr = bufferOutput.bindMemory(to: Float.self, capacity: windowSize * batchSize)
                     let float4Buffer = UnsafeBufferPointer(start: float4Ptr, count: windowSize * batchSize)
@@ -168,6 +168,8 @@ extension LSTMTrainEngine {
         var resultArray: [Float] = [Float]()
 
         var windows = [[Float]]()
+        
+        let batchSize = 1
         
         for windowIndex in 0..<(evaluteData.count/windowSize) - futureOffset {
             let window = Array(evaluteData[windowIndex*windowSize..<(windowIndex+1)*windowSize])
@@ -188,7 +190,7 @@ extension LSTMTrainEngine {
                 
                 let bufferOutput = UnsafeMutableRawPointer.allocate(byteCount: batchSize * windowSize * MemoryLayout<Float>.size, alignment: MemoryLayout<Float>.alignment)
                 
-                lstmTensor?.copyDataFromDeviceMemory(toBytes: bufferOutput, length: batchSize * windowSize * MemoryLayout<Float>.size, synchronizeWithDevice: false)
+                r?.copyDataFromDeviceMemory(toBytes: bufferOutput, length: batchSize * windowSize * MemoryLayout<Float>.size, synchronizeWithDevice: false)
                 
                 let float4Ptr = bufferOutput.bindMemory(to: Float.self, capacity: windowSize * batchSize)
                 let float4Buffer = UnsafeBufferPointer(start: float4Ptr, count: windowSize * batchSize)
