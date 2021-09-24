@@ -29,14 +29,13 @@ class LSTMTrainEngine {
     var denseOutput: MLCTensor!
     var output: MLCTensor!
 
-    let batchSize = 1
+    let batchSize = 64
     let windowSize = 1
     let sampleSize = 1
 
     let lstmLayersCount = 4
 
-    let epochs = 90
-    
+    let epochs = 700
     
     let futureOffset = 50
     let useStates = 1
@@ -75,8 +74,7 @@ extension LSTMTrainEngine {
                                                batchFirst: true,            // Batch size as first paramter: [batchSize, windowSize, sampleSize]
                                                isBidirectional: false,      // We using sigle direction for this task
                                                returnsSequences: true,      // Need return sequences
-                                               dropout: 0.0,                // In IOS 14 LSTM doen't support dropout in MLCompute
-                                               resultMode: .outputAndStates)// Setup return results and states
+                                               dropout: 0.0)// Setup return results and states
         
         let lstmLayer = MLCLSTMLayer(descriptor: lstmDescriptor,
                                      inputWeights: self.lstmInputWeightTensors, // Need setup 4 weight tensors for every LSTM Layer
@@ -87,7 +85,7 @@ extension LSTMTrainEngine {
     }
     
     private func buildTrainingGraph() {
-        let optimizerDescriptor = MLCOptimizerDescriptor(learningRate: 1e-5,
+        let optimizerDescriptor = MLCOptimizerDescriptor(learningRate: 1e-4,
                                                          gradientRescale: 1.0,
                                                          regularizationType: .l2 ,
                                                          regularizationScale: 0.1)
@@ -113,35 +111,35 @@ extension LSTMTrainEngine {
 extension LSTMTrainEngine {
 
     func execTrainingLoop(trainingData: [Float], resultHandlerLog: @escaping (([Float], Int) -> Void)) {
-        _ = self.batchSize
+        let batchSize = self.batchSize
         let windowSize = self.windowSize
         _ = self.sampleSize
-
-        let lstmLayersCount = self.lstmLayersCount
 
         for epoch in 0..<epochs {
             var resultArray: [Float] = [Float]()
 
-            var hiddenStates = [[Float]](repeating: [Float](repeating: 0.0, count: windowSize), count: lstmLayersCount)
-            var cellStates = [[Float]](repeating: [Float](repeating: 0.0, count: windowSize), count: lstmLayersCount)
-                        
+            var windows = [[Float]]()
+            var nextWindows = [[Float]]()
+            
             for windowIndex in 0..<(trainingData.count/windowSize) - futureOffset {
-                var window = Array(trainingData[windowIndex*windowSize..<(windowIndex+1)*windowSize])
+                let window = Array(trainingData[windowIndex*windowSize..<(windowIndex+1)*windowSize])
                 let nextWindow = Array(trainingData[(windowIndex + futureOffset)*windowSize..<(windowIndex + futureOffset + 1)*windowSize])
+                windows.append(window)
+                nextWindows.append(nextWindow)
+            }
+            
+            for batchIndex in 0..<windows.count/batchSize {
+                let batchWindow = Array(windows[batchIndex*batchSize*windowSize..<(batchIndex + 1)*batchSize*windowSize]).flatMap { $0.compactMap { $0 } }
+                let nextBatchWindow = Array(nextWindows[batchIndex*batchSize*windowSize..<(batchIndex + 1)*batchSize*windowSize]).flatMap { $0.compactMap { $0 } }
 
-                for layerIndex in 0..<lstmLayersCount {
-                    window.append(contentsOf: hiddenStates[layerIndex])
-                    window.append(contentsOf: cellStates[layerIndex])
-                }
-                
-                let windowData = window.withUnsafeBufferPointer { pointer in
+                let windowData = batchWindow.withUnsafeBufferPointer { pointer in
                     MLCTensorData(immutableBytesNoCopy: pointer.baseAddress!,
-                                  length: windowSize * MemoryLayout<Float>.size * (1 + useStates * 2 * lstmLayersCount))
+                                  length: batchSize * windowSize * MemoryLayout<Float>.size)
                 }
 
-                let nextWindowData = nextWindow.withUnsafeBufferPointer { pointer in
+                let nextWindowData = nextBatchWindow.withUnsafeBufferPointer { pointer in
                     MLCTensorData(immutableBytesNoCopy: pointer.baseAddress!,
-                                  length: windowSize*MemoryLayout<Float>.size)
+                                  length: batchSize * windowSize * MemoryLayout<Float>.size)
                 }
 
                 self.trainingGraph.execute(inputsData: ["data" : windowData],
@@ -150,23 +148,15 @@ extension LSTMTrainEngine {
                                       batchSize: batchSize,
                                       options: [.synchronous]) { [self] (r, e, time) in
                     
-                    let bufferOutput = UnsafeMutableRawPointer.allocate(byteCount: windowSize * MemoryLayout<Float>.size * (1 + useStates * lstmLayersCount * 2), alignment: MemoryLayout<Float>.alignment)
+                    let bufferOutput = UnsafeMutableRawPointer.allocate(byteCount: batchSize * windowSize * MemoryLayout<Float>.size, alignment: MemoryLayout<Float>.alignment)
                     
-                    lstmTensor?.copyDataFromDeviceMemory(toBytes: bufferOutput, length: windowSize * MemoryLayout<Float>.size * (1 + useStates * lstmLayersCount * 2), synchronizeWithDevice: false)
+                    lstmTensor?.copyDataFromDeviceMemory(toBytes: bufferOutput, length: batchSize * windowSize * MemoryLayout<Float>.size, synchronizeWithDevice: false)
                     
-                    let float4Ptr = bufferOutput.bindMemory(to: Float.self, capacity: windowSize * (1 + useStates * lstmLayersCount * 2))
-                    let float4Buffer = UnsafeBufferPointer(start: float4Ptr, count: windowSize * (1 + useStates * lstmLayersCount * 2))
-                    let predictedArray = Array(float4Buffer[0..<windowSize])
-                    
-                    for layerIndex in 0..<lstmLayersCount {
-                        let hiddenState = Array(float4Buffer[windowSize*(1 + layerIndex * 2)..<windowSize*(2 + layerIndex * 2)])
-                        let cellState = Array(float4Buffer[windowSize*(2 + layerIndex * 2)..<windowSize*(3 + layerIndex * 2)])
+                    let float4Ptr = bufferOutput.bindMemory(to: Float.self, capacity: windowSize * batchSize)
+                    let float4Buffer = UnsafeBufferPointer(start: float4Ptr, count: windowSize * batchSize)
+                    let predictedArray = Array(float4Buffer[0..<windowSize*batchSize])
 
-                        hiddenStates[layerIndex] = hiddenState
-                        cellStates[layerIndex] = cellState
-                    }
-
-                    resultArray = predictedArray
+                    resultArray.append(contentsOf: predictedArray)
                 }
             }
             
@@ -177,47 +167,32 @@ extension LSTMTrainEngine {
     func predictForecastGraph(evaluteData: [Float], resultHandler: @escaping (([Float]) -> Void)) {
         var resultArray: [Float] = [Float]()
 
-        _ = self.batchSize
-        let windowSize = self.windowSize
-        _ = self.sampleSize
-
-        let lstmLayersCount = self.lstmLayersCount
+        var windows = [[Float]]()
         
-        var hiddenStates = [[Float]](repeating: [Float](repeating: 0.0, count: windowSize), count: lstmLayersCount)
-        var cellStates = [[Float]](repeating: [Float](repeating: 0.0, count: windowSize), count: lstmLayersCount)
+        for windowIndex in 0..<(evaluteData.count/windowSize) - futureOffset {
+            let window = Array(evaluteData[windowIndex*windowSize..<(windowIndex+1)*windowSize])
+            windows.append(window)
+        }
         
-        for windowIndex in 0..<(evaluteData.count/windowSize)-1 {
-            var window = Array(evaluteData[windowIndex * windowSize..<(windowIndex + 1) * windowSize])
+        for batchIndex in 0..<windows.count/batchSize {
+            let batchWindow = Array(windows[batchIndex*batchSize*windowSize..<(batchIndex + 1)*batchSize*windowSize]).flatMap { $0.compactMap { $0 } }
 
-            for layerIndex in 0..<lstmLayersCount {
-                window.append(contentsOf: hiddenStates[layerIndex])
-                window.append(contentsOf: cellStates[layerIndex])
-            }
-
-            let windowData = window.withUnsafeBufferPointer { pointer in
+            let windowData = batchWindow.withUnsafeBufferPointer { pointer in
                 MLCTensorData(immutableBytesNoCopy: pointer.baseAddress!,
-                              length: windowSize * MemoryLayout<Float>.size * (1 + useStates * 2 * lstmLayersCount))
+                              length: batchSize * windowSize * MemoryLayout<Float>.size)
             }
-            
+
             self.inferenceGraph.execute(inputsData: ["data" : windowData],
                                   batchSize: batchSize,
                                   options: [.synchronous]) { [self] (r, e, time) in
-             
-                let bufferOutput = UnsafeMutableRawPointer.allocate(byteCount: windowSize * MemoryLayout<Float>.size * (1 + useStates * lstmLayersCount * 2), alignment: MemoryLayout<Float>.alignment)
                 
-                lstmTensor?.copyDataFromDeviceMemory(toBytes: bufferOutput, length: windowSize * MemoryLayout<Float>.size * (1 + useStates * lstmLayersCount * 2), synchronizeWithDevice: false)
+                let bufferOutput = UnsafeMutableRawPointer.allocate(byteCount: batchSize * windowSize * MemoryLayout<Float>.size, alignment: MemoryLayout<Float>.alignment)
                 
-                let float4Ptr = bufferOutput.bindMemory(to: Float.self, capacity: windowSize * (1 + useStates * lstmLayersCount * 2))
-                let float4Buffer = UnsafeBufferPointer(start: float4Ptr, count: windowSize * (1 + useStates * lstmLayersCount * 2))
-                let predictedArray = Array(float4Buffer[0..<windowSize])
+                lstmTensor?.copyDataFromDeviceMemory(toBytes: bufferOutput, length: batchSize * windowSize * MemoryLayout<Float>.size, synchronizeWithDevice: false)
                 
-                for layerIndex in 0..<lstmLayersCount {
-                    let hiddenState = Array(float4Buffer[windowSize*(1 + layerIndex * 2)..<windowSize*(2 + layerIndex * 2)])
-                    let cellState = Array(float4Buffer[windowSize*(2 + layerIndex * 2)..<windowSize*(3 + layerIndex * 2)])
-
-                    hiddenStates[layerIndex] = hiddenState
-                    cellStates[layerIndex] = cellState
-                }
+                let float4Ptr = bufferOutput.bindMemory(to: Float.self, capacity: windowSize * batchSize)
+                let float4Buffer = UnsafeBufferPointer(start: float4Ptr, count: windowSize * batchSize)
+                let predictedArray = Array(float4Buffer[0..<windowSize*batchSize])
 
                 resultArray.append(contentsOf: predictedArray)
             }
