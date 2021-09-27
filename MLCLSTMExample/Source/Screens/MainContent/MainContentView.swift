@@ -18,7 +18,7 @@ struct MainContentView: View {
             VStack{
                 LineView(data: self.viewModel.generatedData, title: "Generated Data", legend: nil)
                                 
-                LineView(data: self.viewModel.predictedData, title: "Predicted by LSTM Data", legend: nil)
+                LineView(data: self.viewModel.predictedData, title: "Predicted by Kalman Filter Data", legend: nil)
 
                 Text("Epoch: \(viewModel.epochIndex)")
 

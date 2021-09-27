@@ -14,6 +14,8 @@
 		EB20341A26F8F54100B36ABF /* MainContentViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB20341926F8F54100B36ABF /* MainContentViewModel.swift */; };
 		EB20342326F91A7500B36ABF /* SwiftUICharts in Frameworks */ = {isa = PBXBuildFile; productRef = EB20342226F91A7500B36ABF /* SwiftUICharts */; };
 		EB20342626F91F4700B36ABF /* LSTMTrainEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB20342526F91F4700B36ABF /* LSTMTrainEngine.swift */; };
+		EB33D183270120E900DD6B1A /* 1.csv in Resources */ = {isa = PBXBuildFile; fileRef = EB33D182270120E900DD6B1A /* 1.csv */; };
+		EB33D1852701D3AE00DD6B1A /* KalmanFilter.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB33D1842701D3AE00DD6B1A /* KalmanFilter.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -26,6 +28,8 @@
 		EB20341426F8F4D900B36ABF /* MLCLSTMExample.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MLCLSTMExample.entitlements; sourceTree = "<group>"; };
 		EB20341926F8F54100B36ABF /* MainContentViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainContentViewModel.swift; sourceTree = "<group>"; };
 		EB20342526F91F4700B36ABF /* LSTMTrainEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LSTMTrainEngine.swift; sourceTree = "<group>"; };
+		EB33D182270120E900DD6B1A /* 1.csv */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = 1.csv; sourceTree = "<group>"; };
+		EB33D1842701D3AE00DD6B1A /* KalmanFilter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KalmanFilter.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -81,6 +85,7 @@
 			children = (
 				EB20341726F8F50E00B36ABF /* Screens */,
 				EB20340526F8F4C800B36ABF /* MLCLSTMExampleApp.swift */,
+				EB33D1842701D3AE00DD6B1A /* KalmanFilter.swift */,
 			);
 			path = Source;
 			sourceTree = "<group>";
@@ -105,6 +110,7 @@
 			isa = PBXGroup;
 			children = (
 				EB20340726F8F4C800B36ABF /* MainContentView.swift */,
+				EB33D182270120E900DD6B1A /* 1.csv */,
 				EB20341926F8F54100B36ABF /* MainContentViewModel.swift */,
 				EB20342526F91F4700B36ABF /* LSTMTrainEngine.swift */,
 			);
@@ -174,6 +180,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				EB33D183270120E900DD6B1A /* 1.csv in Resources */,
 				EB20340D26F8F4CA00B36ABF /* Preview Assets.xcassets in Resources */,
 				EB20340A26F8F4CA00B36ABF /* Assets.xcassets in Resources */,
 			);
@@ -187,6 +194,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				EB20342626F91F4700B36ABF /* LSTMTrainEngine.swift in Sources */,
+				EB33D1852701D3AE00DD6B1A /* KalmanFilter.swift in Sources */,
 				EB20340826F8F4C800B36ABF /* MainContentView.swift in Sources */,
 				EB20341A26F8F54100B36ABF /* MainContentViewModel.swift in Sources */,
 				EB20340626F8F4C800B36ABF /* MLCLSTMExampleApp.swift in Sources */,
@@ -320,7 +328,7 @@
 				CODE_SIGN_ENTITLEMENTS = MLCLSTMExample/MLCLSTMExample.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_ASSET_PATHS = "\"MLCLSTMExample/Preview Content\"";
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = L9DCNBKQG8;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = MLCLSTMExample/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
@@ -344,7 +352,7 @@
 				CODE_SIGN_ENTITLEMENTS = MLCLSTMExample/MLCLSTMExample.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_ASSET_PATHS = "\"MLCLSTMExample/Preview Content\"";
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = L9DCNBKQG8;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = MLCLSTMExample/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
