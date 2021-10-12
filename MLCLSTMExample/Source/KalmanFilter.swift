@@ -29,19 +29,16 @@ class KalmanFilter<T: FloatingPoint> {
         let dispersion = squareSumm / (T(values.count))
         variance = sqrt(dispersion)
         
-        Pc = T(0)
-        G = T(0)
         P = T(1)
         Xe = T(0)
         
         func filter(value: T) -> T {
-            Pc = P + varianceProcess
-            G = Pc / (Pc + variance)
+            let Pc = P + varianceProcess
+            let G = Pc / (Pc + variance)
             P = (T(1) - G) * Pc
             
             let Xp = Xe
-            let Zp = Xp
-            Xe = G * (value - Zp) + Xp
+            Xe = G * (value - Xp) + Xp
             return Xe
         }
         
